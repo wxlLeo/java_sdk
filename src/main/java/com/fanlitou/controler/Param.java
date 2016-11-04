@@ -6,17 +6,19 @@ public class Param {
 	public String t;
 	public String serial_num;
 	public String uid;
-	public String registertoken;
-	public String logintoken;
-	public String bidUrl;
+	public String register_token;
+	public String login_token;
+	public String bid_url;
 	public String source;
-	public String startTime;
-	public String endTime;
+	public String start_time;
+	public String end_time;
 	public String sign;
 	
 	@Override
 	public String toString(){
-		return "fcode:" + fcode + " phone_num:" + phone_num + " t:" + t + " serial_num:" + serial_num + " uid:" + uid + " sign:" + sign;
+		return "fcode:" + fcode + " phone_num:" + phone_num + " t:" + t + " serial_num:" + serial_num + " uid:" + uid + " sign:" + sign 
+				+ " register_token:" + register_token + " login_token:" + login_token + " bid_url:" + bid_url + " source:" + source
+				+ " start_time:" + start_time + " end_time:" + end_time;
 	}
 	
 	public String getFcode() {
@@ -57,19 +59,19 @@ public class Param {
 	}
 
 	public String getRegistertoken() {
-		return registertoken;
+		return register_token;
 	}
 
 	public void setRegistertoken(String registertoken) {
-		this.registertoken = registertoken;
+		this.register_token = registertoken;
 	}
 
 	public String getLogintoken() {
-		return logintoken;
+		return login_token;
 	}
 
 	public void setLogintoken(String logintoken) {
-		this.logintoken = logintoken;
+		this.login_token = logintoken;
 	}
 
 	public String getSource() {
@@ -81,27 +83,27 @@ public class Param {
 	}
 
 	public String getBidUrl() {
-		return bidUrl;
+		return bid_url;
 	}
 
 	public void setBidUrl(String bidUrl) {
-		this.bidUrl = bidUrl;
+		this.bid_url = bidUrl;
 	}
 
 	public String getStartTime() {
-		return startTime;
+		return start_time;
 	}
 
 	public void setStartTime(String startTime) {
-		this.startTime = startTime;
+		this.start_time = startTime;
 	}
 
 	public String getEndTime() {
-		return endTime;
+		return end_time;
 	}
 
 	public void setEndTime(String endTime) {
-		this.endTime = endTime;
+		this.end_time = endTime;
 	}
 	
 	

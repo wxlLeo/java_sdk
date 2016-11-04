@@ -114,15 +114,13 @@ public class FanlitouController {
     public void userBind(@RequestParam("fcode") String fcode, 
     		@RequestParam("phone_num") String phoneNum, 
     		@RequestParam("t") String t, 
-    		@RequestParam("register_token") String registerToken, 
-    		@RequestParam("login_token") String loginToken, 
     		@RequestParam("bid_url") String bidUrl, 
     		@RequestParam("source") String source, 
     		@RequestParam("sign") String sign){
 		
 		AutoregisterBase autoregister = new AutoregisterBase();
 		
-		autoregister.doUserBind(phoneNum, fcode, registerToken, loginToken, t, bidUrl, source, sign);
+		autoregister.doUserBind(phoneNum, fcode, t, bidUrl, source, sign);
 		
 	}
 	
