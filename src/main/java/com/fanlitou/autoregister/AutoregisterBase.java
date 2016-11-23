@@ -34,8 +34,6 @@ public class AutoregisterBase {
 	
 	
 	public AutoregisterBase(){
-		this.notifyUrlTest = "http://test.fanlitou.com/api/user_bound/notify/";
-		this.notifyUrlProduction = "https://www.fanlitou.com/api/user_bound/notify/";
 		this.fcode = "fanlitou";
 		this.secretKey = "1234567890123456";
 		this.cryptionKey = "1234567890123456";  //初始化密钥，长度必须为16位
@@ -45,59 +43,6 @@ public class AutoregisterBase {
 		cryption = new AES(this.cryptionKey);
 	}
 	
-	/**
-	 * @param phoneNum
-	 * @param fcode
-	 * @param timeStamp
-	 * @return md5验签
-	 */
-	public String sign(String phoneNum, String fcode, String timeStamp){
-		String signStr = phoneNum + fcode + timeStamp + this.secretKey;
-		String md5Sign = MD5.GetMD5Code(signStr);
-		return md5Sign;
-	}
-	
-	/**
-	 * @param sign
-	 * @param phoneNum
-	 * @param fcode
-	 * @param timeStamp
-	 * @param serialNum
-	 * 验证注册sign
-	 */
-	public Result validateRegisterSign(String sign, String phoneNum, String fcode, String timeStamp){
-		String mySign = this.sign(this.cryption.decrypt(phoneNum), fcode, this.cryption.decrypt(timeStamp));
-		Result validationResult = new Result();
-		if(StringUtils.equals(mySign, sign)){
-			validationResult.setSuccess(true);
-		}else{
-			validationResult.setSuccess(false);
-			validationResult.setStatus(Constants.AutoRegisterStatus.NOT_PASS_VALIDATION);
-			validationResult.setPhoneNum(phoneNum);
-			validationResult.setErrMsg("未通过安全校验");
-		}
-		return validationResult;
-	}
-	
-	/**
-	 * @param sign
-	 * @param fcode
-	 * @param timeStamp
-	 * @return 验证投资记录sign
-	 */
-	public Result validateInvestRecordSign(String sign, String fcode, String timeStamp){
-		String signStr = timeStamp + fcode + this.secretKey;
-		Result validationResult = new Result();
-		String mySign = MD5.GetMD5Code(signStr);
-		if(StringUtils.equals(mySign, sign)){
-			validationResult.setSuccess(true);
-		}else{
-			validationResult.setSuccess(false);
-			validationResult.setStatus(Constants.AutoRegisterStatus.NOT_PASS_VALIDATION);
-			validationResult.setErrMsg("未通过安全校验");
-		}
-		return validationResult;
-	}
 	
 	/**
 	 * @param startTime
@@ -116,16 +61,15 @@ public class AutoregisterBase {
 		    Date startDateAfter30Days = calendar.getTime();
 		    if(startDateAfter30Days.before(endDate)){
 		    	validationResult.setSuccess(false);
-		    	validationResult.setStatus(Constants.AutoRegisterStatus.NOT_PASS_VALIDATION);
-				validationResult.setErrMsg("请求时间跨度超过30天");
+				validationResult.setMsg("请求时间跨度超过30天");
 		    }else{
 		    	validationResult.setSuccess(true);
 		    }
 		} catch (ParseException e) {
 			e.printStackTrace();
-			
+			validationResult.setSuccess(false);
 			validationResult.setStatus(Constants.AutoRegisterStatus.NOT_PASS_VALIDATION);
-			validationResult.setErrMsg("查询日期格式错误");
+			validationResult.setMsg("查询日期格式错误");
 		}
 		return validationResult;
 	}
@@ -134,17 +78,18 @@ public class AutoregisterBase {
 	 * @param data
 	 * @return 验证数据解密是否正确
 	 */
-	public Result validateRequestData(String data){
-		String decryptStr = this.cryption.decrypt(data);
+	public Result validateRequestData(String ...params){
 		Result validationResult = new Result();
-		if(StringUtils.isEmpty(decryptStr)){
-			validationResult.setSuccess(false);
-			validationResult.setStatus(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS);
-			validationResult.setErrMsg("数据解密错误");
-		}else{
-			validationResult.setSuccess(true);
+		for(String param: params){
+			String decryptStr = this.cryption.decrypt(param);
+			
+			if(StringUtils.isEmpty(decryptStr)){
+				validationResult.setSuccess(false);
+				validationResult.setStatus(this.cryption.encrypt(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS));
+				validationResult.setMsg(this.cryption.encrypt("数据解密错误"));
+			}
 		}
-		
+		validationResult.setSuccess(true);
 		return validationResult;
 	}
 	
@@ -161,28 +106,20 @@ public class AutoregisterBase {
 		 return token;
 	}
 	
-	public Result autoRegisterValidate(String phoneNum,  String serialNum, String fcode, String t, String uid, String sign){
-		Result phoneValidateResult =  this.validateRequestData(phoneNum);
+	public Result doValidate(String sign, String t, String ...params){
+		Result phoneValidateResult =  this.validateRequestData(params);
 		if(!phoneValidateResult.isSuccess){
 			return phoneValidateResult;
 		}
 		
-		Result tValidateResult =  this.validateRequestData(t);
-		if(!tValidateResult.isSuccess){
-			return tValidateResult;
-		}
-		
-		Result uidValidateResult =  this.validateRequestData(uid);
-		if(!uidValidateResult.isSuccess){
-			return uidValidateResult;
-		}
-		
-		Result signValidateResult =  this.validateRegisterSign(sign, phoneNum, fcode, t);
+		Result signValidateResult =  this.validateSign(sign, t);
 		if(!signValidateResult.isSuccess){
 			return signValidateResult;
 		}
 		
-		return null;
+		Result result = new Result();
+		result.setSuccess(true);
+		return result;
 	}
 	
 	/**
@@ -192,11 +129,11 @@ public class AutoregisterBase {
 	 * @param serialNum
 	 * @return 字段注册，创建一个新用户
 	 */
-	public Result autoRegister(String phoneNum,  String serialNum, String fcode, String t, String uid, String sign){
+	public Result autoRegister(String phoneNum, String fcode, String t, String uid, String sign){
 		Result result = new Result();
 		try{
-			Result validateResult =  this.autoRegisterValidate(phoneNum, serialNum, fcode, t, uid, sign);
-			if(validateResult != null){
+			Result validateResult =  this.doValidate(sign, t, phoneNum, fcode, t, uid, sign);
+			if(validateResult != null && !validateResult.isSuccess){
 				return validateResult;
 			}
 			
@@ -205,10 +142,8 @@ public class AutoregisterBase {
 		// TODO 需要按照平台自己规则，增加用户已经存在逻辑
 //		if(user already exists){
 //			result.setSuccess(false);
-//			result.setStatus(Constants.AutoRegisterStatus.USER_ALREADY_EXIST);
-//			result.setPhoneNum(phoneNum);
-//			result.setSerialNum(serialNum);
-//			result.setErrMsg("注册失败，该用户已存在，不可重复注册");
+//			result.setStatus(this.cryption.encrypt(Constants.AutoRegisterStatus.USER_ALREADY_EXIST));
+//			result.setMsg(this.cryption.encrypt("注册失败，该用户已存在，不可重复注册"));
 //		}
 		String password = this.generatePassword();
 		
@@ -221,94 +156,82 @@ public class AutoregisterBase {
 		//this.sendSms(phoneNumDecrypt, password)
 		
 		result.setSuccess(true);
-		result.setStatus(Constants.AutoRegisterStatus.REGISTER_SUCCESS);
-		result.setPhoneNum(phoneNum);
+		result.setStatus(this.cryption.encrypt(Constants.AutoRegisterStatus.REGISTER_SUCCESS));
 		// TODO 需要将注册后的用户名返回回来
-		result.setUserName(this.cryption.encrypt("userName"));
-		result.setSerialNum(serialNum);
-		result.setRegisterToken(registerToken);
-		result.setErrMsg("注册成功");
+		result.setUser_name(this.cryption.encrypt("userName"));
+		result.setRegister_token(this.cryption.encrypt(registerToken));
+		result.setMsg(this.cryption.encrypt("注册成功"));
 		
 		}catch(Exception e){
 			e.printStackTrace();
 			
 			result.setSuccess(false);
-	    	result.setStatus(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS);
-	    	result.setPhoneNum(phoneNum);
-	    	result.setSerialNum(serialNum);
-			result.setErrMsg("注册失败，系统错误");
+	    	result.setStatus(this.cryption.encrypt(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS));
+			result.setMsg(this.cryption.encrypt("注册失败，系统错误"));
 		}
 		
 		return result;
 		
 	}
 	
-	public Result registerQuery(String phoneNum, String serialNum, String fcode, String t, String uid, String sign){
+	public Result registerQuery(String uid, String fcode, String t, String sign){
 		Result result = new Result();
 		try {
-			Result validateResult =  this.autoRegisterValidate(phoneNum, serialNum, fcode, t, uid, sign);
-			if(validateResult != null){
+			Result validateResult =  this.doValidate(sign, t, uid, fcode, t, sign);
+			if(validateResult != null && !validateResult.isSuccess){
 				return validateResult;
 			}
 			
 			// TODO 需要根据平台自己规则，查询用户注册状态
 //			if("新用户，未注册"){
 //				result.setSuccess(true);
-//		    	result.setStatus(Constants.RegisterQueryStatus.NOT_REGISTER);
-//		    	result.setPhoneNum(phoneNum);
-//		    	result.setSerialNum(serialNum);
-//				result.setErrMsg("新用户，未注册");
+//		    	result.setStatus(this.cryption.encrypt(Constants.RegisterQueryStatus.NOT_REGISTER));
+//		    	result.setRegister_token(this.cryption.encrypt(""));
+//		    	result.setUser_name(this.cryption.encrypt(""));
+//				result.setMsg(this.cryption.encrypt("新用户，未注册"));
+//				
 //			}else if("老用户，已注册，非渠道用户，但未绑定渠道账户"){
 //				result.setSuccess(true);
-//		    	result.setStatus(Constants.RegisterQueryStatus.NOT_FANLITOU_USER);
-//		    	result.setPhoneNum(phoneNum);
-//		    	result.setSerialNum(serialNum);
-//				result.setErrMsg("老用户，已注册，非渠道用户，但未绑定渠道账户");
+//		    	result.setStatus(this.cryption.encrypt(Constants.RegisterQueryStatus.NOT_FANLITOU_USER));
+//		    	result.setRegister_token(this.cryption.encrypt(""));
+//		    	result.setUser_name(this.cryption.encrypt(""));
+//				result.setMsg("老用户，已注册，非渠道用户，但未绑定渠道账户");
 //			}else if("老用户绑定"){
 //				result.setSuccess(true);
-//		    	result.setStatus(Constants.RegisterQueryStatus.OLD_ACCOUNT_BIND);
-//		    	result.setPhoneNum(phoneNum);
+//		    	result.setStatus(this.cryption.encrypt(Constants.RegisterQueryStatus.OLD_ACCOUNT_BIND));
 //		    	// TODO 需要将注册后的用户名返回回来
-//				result.setUserName(this.cryption.encrypt("userName"));
+//				result.setUser_name(this.cryption.encrypt("userName"));
 //				// TODO 需要将register token设置上
-//				result.setRegisterToken("registerToken");
-//		    	result.setSerialNum(serialNum);
-//				result.setErrMsg("老用户绑定");
-//			}else if("老用户，已注册，渠道用户"){
+//				result.setRegister_token(this.cryption.encrypt("registerToken"));
+//				result.setMsg(this.cryption.encrypt("老用户绑定"));
+//			}else if("老用户，已注册，返利投渠道用户"){
 //				result.setSuccess(true);
-//		    	result.setStatus(Constants.RegisterQueryStatus.FANLITOU_USER);
-//		    	result.setPhoneNum(phoneNum);
+//		    	result.setStatus(this.cryption.encrypt(Constants.RegisterQueryStatus.FANLITOU_USER));
 //		    	// TODO 需要将注册后的用户名返回回来
-//				result.setUserName(this.cryption.encrypt("userName"));
+//				result.setUser_name(this.cryption.encrypt("userName"));
 //				// TODO 需要将register token设置上
-//				result.setRegisterToken("registerToken");
-//		    	result.setSerialNum(serialNum);
-//				result.setErrMsg("老用户，已注册，渠道用户");
+//				result.setRegister_token(this.cryption.encrypt("registerToken"));
+//				result.setMsg("老用户，已注册，渠道用户");
 //			}else if("老用户，已注册，其他渠道用户"){
 //				result.setSuccess(true);
-//		    	result.setStatus(Constants.RegisterQueryStatus.OTHER_CHANNEL_USER);
-//		    	result.setPhoneNum(phoneNum);
-//		    	result.setSerialNum(serialNum);
-//				result.setErrMsg("老用户，已注册，其他渠道用户");
+//		    	result.setStatus(this.cryption.encrypt(Constants.RegisterQueryStatus.OTHER_CHANNEL_USER));
+//		    	result.setRegister_token(this.cryption.encrypt(""));
+//		    	result.setUser_name(this.cryption.encrypt(""));
+//				result.setMsg(this.cryption.encrypt("老用户，已注册，其他渠道用户"));
 //			}
 			
 			result.setSuccess(true);
-	    	result.setStatus(Constants.RegisterQueryStatus.FANLITOU_USER);
-	    	result.setPhoneNum(phoneNum);
+	    	result.setStatus(this.cryption.encrypt(Constants.RegisterQueryStatus.FANLITOU_USER));
 	    	// TODO 需要将注册后的用户名返回回来
-			result.setUserName(this.cryption.encrypt("userName"));
+			result.setUser_name(this.cryption.encrypt("userName"));
 			// TODO 需要将register token设置上
-			result.setRegisterToken("registerToken");
-	    	result.setSerialNum(serialNum);
-			result.setErrMsg("老用户，已注册，渠道用户");
+			result.setRegister_token(this.cryption.encrypt("registerToken"));
+			result.setMsg("老用户，已绑定返利投渠道用户");
 		} catch (Exception e) {
 			e.printStackTrace();
-			
 			result.setSuccess(false);
-	    	result.setStatus(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS);
-	    	result.setPhoneNum(phoneNum);
-	    	result.setSerialNum(serialNum);
-			result.setErrMsg("注册查询失败，系统错误");
+	    	result.setStatus(this.cryption.encrypt(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS));
+			result.setMsg(this.cryption.encrypt("注册查询失败，系统错误"));
 		}
 		
 		return result;
@@ -321,53 +244,53 @@ public class AutoregisterBase {
 	 * @param uid
 	 * @return 获取用户自动登录token
 	 */
-	public Result getUserLoginToken(String phoneNum, String fcode, String registertoken, String uid, String t, String serialNum, String sign){
+	public Result getUserLoginToken(String fcode, String registertoken, String uid, String t, String sign){
 		Result result = new Result();
 		try{
-			Result validateResult =  this.autoRegisterValidate(phoneNum, serialNum, fcode, t, uid, sign);
-			if(validateResult != null){
+			Result validateResult =  this.doValidate(sign, t, fcode, t, uid, sign);
+			if(validateResult != null && !validateResult.isSuccess){
 				return validateResult;
 			}
 			
-//			//TODO: 需要平台实现判断新用户，未注册逻辑
+			//TODO: 需要平台实现判断新用户，未注册逻辑
 //			if ("新用户，未注册"){
 //				result.setSuccess(false);
-//				result.setStatus(Constants.RegisterQueryStatus.NOT_REGISTER);
-//				result.setLoginToken("");
-//				result.setErrMsg("新用户，未注册");
+//				result.setStatus(this.cryption.encrypt(Constants.RegisterQueryStatus.NOT_REGISTER));
+//				result.setLogin_token(this.cryption.encrypt(""));
+//				result.setMsg(this.cryption.encrypt("新用户，未注册"));
 //                return result;
 //			}
-			//TODO: 需要平台实现判断老用户，已注册，其他渠道用户逻辑
+//			TODO: 需要平台实现判断老用户，已注册，其他渠道用户逻辑
 //            if ("老用户，已注册，其他渠道用户" != null){
 //            	result.setSuccess(false);
-//				result.setStatus(Constants.RegisterQueryStatus.NOT_FANLITOU_USER);
-//				result.setLoginToken("");
-//				result.setErrMsg("老用户，已注册，其他渠道用户");
+//				result.setStatus(this.cryption.encrypt(Constants.RegisterQueryStatus.NOT_FANLITOU_USER));
+//				result.setLogin_token(this.cryption.encrypt(""));
+//				result.setMsg(this.cryption.encrypt("老用户，已注册，其他渠道用户"));
 //	            return result;
 //            }
-            //TODO: 需要平台实现根据phoneNum获得平台register token逻辑
-            if (!StringUtils.equals(registertoken, "register token")){
-            	result.setSuccess(false);
-				result.setStatus(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS);
-				result.setLoginToken("");
-				result.setErrMsg("register token错误");
-	            return result;
-            }
+//            //TODO: 需要平台实现根据phoneNum获得平台register token逻辑
+//            if (!StringUtils.equals(registertoken, "register token")){
+//            	result.setSuccess(false);
+//				result.setStatus(this.cryption.encrypt(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS));
+//				result.setLogin_token(this.cryption.encrypt(""));
+//				result.setMsg(this.cryption.encrypt("register token错误"));
+//	            return result;
+//            }
             
             String loginToken = this.genToken();
             result.setSuccess(true);
-			result.setStatus(Constants.AutoRegisterStatus.GET_TOKEN_SUCCESS);
-			result.setLoginToken(loginToken);
-			result.setErrMsg("获得login token成功");
+			result.setStatus(this.cryption.encrypt(Constants.AutoRegisterStatus.GET_TOKEN_SUCCESS));
+			result.setLogin_token(this.cryption.encrypt(loginToken));
+			result.setMsg(this.cryption.encrypt("获得login token成功"));
             return result;
 			
 		} catch (Exception e) {
 			e.printStackTrace();
 			
 			result.setSuccess(false);
-	    	result.setStatus(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS);
-	    	result.setLoginToken("");
-			result.setErrMsg("获得login token失败，系统错误");
+	    	result.setStatus(this.cryption.encrypt(Constants.AutoRegisterStatus.OTHER_FAIL_STATUS));
+	    	result.setLogin_token(this.cryption.encrypt(""));
+			result.setMsg(this.cryption.encrypt("获得login token失败，系统错误"));
 			return result;
 		}
 		
@@ -383,32 +306,23 @@ public class AutoregisterBase {
 	 * @param source
 	 * @return 用户自动登录
 	 */
-	public void doAutoLogin(String phoneNum, String fcode, String registerToken, String loginToken, String timeStamp, String bidUrl, String source, String sign){
+	public void doAutoLogin(String uid, String fcode, String registerToken, String loginToken, String timeStamp, String bidUrl, String source, String sign){
 		try {
-			Result phoneValidateResult =  this.validateRequestData(phoneNum);
-			if(!phoneValidateResult.isSuccess){
+			Result validateResult =  this.doValidate(sign, timeStamp, uid, fcode, registerToken, loginToken, timeStamp, source, sign);
+			if(validateResult != null && !validateResult.isSuccess){
+				System.out.println("not pass validation");
 				//TODO: 跳转到bidUrl指定的页面
 			}
 			
-			Result tValidateResult =  this.validateRequestData(timeStamp);
-			if(!tValidateResult.isSuccess){
-				//TODO: 跳转到bidUrl指定的页面
-			}
-			
-			Result signValidateResult =  this.validateRegisterSign(sign, phoneNum, fcode, timeStamp);
-			if(!signValidateResult.isSuccess){
-				//TODO: 跳转到bidUrl指定的页面
-			}
-			
-			String phoneNumDecrypt = this.cryption.decrypt(phoneNum);
+			String uidDecrypt = this.cryption.decrypt(uid);
 			String timeStampDecrypt = this.cryption.decrypt(timeStamp);
 			
-//			User user = queryUser(phoneNumDecrypt);
+//			User user = queryUser(uidDecrypt);
 //			if (user == null){
 //				System.out.println("用户不存在");
 //				//TODO: 跳转到bidUrl指定的页面
 //			}
-//			LoginToken platLoginToken = queryLoginToken(fcode, phoneNumDecrypt, loginToken, registerToken);
+//			LoginToken platLoginToken = queryLoginToken(fcode, uidDecrypt, loginToken, registerToken);
 //			if(!StringUtils.equals(loginToken, platLoginToken.getLoginToken())){
 //				System.out.println("loginToken错误");
 //				//TODO: 跳转到bidUrl指定的页面
@@ -434,10 +348,12 @@ public class AutoregisterBase {
 ////		    		do login for user in pc
 //		    	}
 //		    }
-//		    
-//		  //TODO: 跳转到bidUrl指定的页面
-//			
-//			
+		    
+		  //TODO: 跳转到bidUrl指定的页面
+			
+			System.out.println("Login success");
+			
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 			
@@ -445,38 +361,32 @@ public class AutoregisterBase {
 		}
 	}
 	
+	
 	/**
-	 * @param phoneNum
+	 * @param uid
 	 * @param fcode
-	 * @param registerToken
-	 * @param loginToken
 	 * @param timeStamp
 	 * @param bidUrl
 	 * @param source
-	 * @return 用户自动登录
+	 * @param sign
+	 * 老账户绑定
 	 */
-	public void doUserBind(String phoneNum, String fcode, String timeStamp, String bidUrl, String source, String sign){
+	public void doUserBind(String uid, String fcode, String timeStamp, String bidUrl, String source, String sign){
 		try {
-			Result phoneValidateResult =  this.validateRequestData(phoneNum);
-			if(!phoneValidateResult.isSuccess){
+			Result validateResult =  this.doValidate(sign, timeStamp, uid, fcode, timeStamp, source, sign);
+			if(validateResult != null && !validateResult.isSuccess){
+				System.out.println("not pass validation");
 				//TODO: 跳转到bidUrl指定的页面
 			}
+			String sourceDecrypt = this.cryption.decrypt(source);
 			
-			Result tValidateResult =  this.validateRequestData(timeStamp);
-			if(!tValidateResult.isSuccess){
-				//TODO: 跳转到bidUrl指定的页面
-			}
-			
-			Result signValidateResult =  this.validateRegisterSign(sign, phoneNum, fcode, timeStamp);
-			if(!signValidateResult.isSuccess){
-				//TODO: 跳转到bidUrl指定的页面
-			}
-			
-	    	if(StringUtils.equals(source, "wap")){
+	    	if(StringUtils.equals(sourceDecrypt, "wap")){
 	    		//TODO: 跳转到wap账号绑定登录页面，用户登录成功之后，为用户做账号绑定
 			}else{
 				//TODO: 跳转到pc账号绑定登录页面，用户登录成功之后，为用户做账号绑定
 			}
+	    	
+	    	System.out.println("Bind success");
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -485,57 +395,29 @@ public class AutoregisterBase {
 		}
 	}
 	
-	/**
-	 * @param phoneNum
-	 * @param status
-	 * @param userName
-	 * @return 账户绑定通知
-	 */
-	public String userBindNotify(String phoneNum, String status, String userName){
-		// TODO: 需要平台实现查询该绑定用户的register token逻辑
-//		String registerToken = getRegisterToken(phoneNum, this.fcode);
-		String registerToken = "";
-		// TODO: 需要平台实现查询该绑定用户在绑定之前是否有过投资的逻辑
-		boolean is_already_invest_before_user_bind = false;
-		String timeStamp = String.valueOf(Utils.getTimeStampInt());
-		JSONObject obj = new JSONObject(); 
-        obj.put("phone_num", this.cryption.encrypt(phoneNum)); 
-        obj.put("status", status);
-        obj.put("t", this.cryption.encrypt(timeStamp));
-        obj.put("user_name", this.cryption.encrypt(userName));
-        obj.put("sign", this.sign(phoneNum, userName, timeStamp));
-        obj.put("serial_num", "");
-        obj.put("register_token", registerToken);
-        obj.put("is_already_invest_before_user_bind", is_already_invest_before_user_bind);
-        obj.put("err_msg", "");
-        
-        String param = obj.toJSONString();
-        
-		String result = Utils.sendPost(this.notifyUrlTest, param, "application/json");
-		
-		return result;
-	}
+
 	
 	/**
 	 * @param sign
-	 * @param fcode
 	 * @param timeStamp
 	 * @param startTime
 	 * @param endTime
 	 * @return 投资记录查询
 	 */
-	public String getInvestRecord(String sign, String fcode, String timeStamp, String startTime, String endTime){
+	public String getInvestRecord(String sign, String timeStamp, String startTime, String endTime){
 		JSONObject obj = new JSONObject();
-		Result signValidationResult = this.validateInvestRecordSign(sign, fcode, timeStamp);
+		Result signValidationResult = this.validateNotEncryptSign(sign, timeStamp);
 		if(!signValidationResult.isSuccess){
 			obj.put("success", false);
-			obj.put("message", signValidationResult.getErrMsg());
+			obj.put("message", signValidationResult.getMsg());
+			obj.put("orders", new ArrayList());
 			return obj.toJSONString();
 		}
 		Result dateValidationResult = this.validateStartEndTime(startTime, endTime);
 		if(!dateValidationResult.isSuccess){
 			obj.put("success", false);
-			obj.put("message", dateValidationResult.getErrMsg());
+			obj.put("message", dateValidationResult.getMsg());
+			obj.put("orders", new ArrayList());
 			return obj.toJSONString();
 		}
 		startTime = startTime + " 00:00:00";
@@ -550,16 +432,19 @@ public class AutoregisterBase {
 			List investRecords = new ArrayList();
 			
 			HashMap rd = new HashMap();
+			rd.put("uid", "H31f70274e");
 			rd.put("phoneNum", "13012345678");
 			rd.put("bidId", "1");
 			rd.put("bidName", "test");
-			rd.put("bidStatus", "还款中");
+			rd.put("bidStatus", 2);
 			rd.put("isFirstInvest", true);
 			rd.put("investAmount", 10000);
 			rd.put("investTime", "2015-10-10 01:02:03");
 			rd.put("isAdvancedRepay", false); //是否提前还款
 			rd.put("advancedRepayDate", ""); //提前还款时间
 			rd.put("isAssign", false); //是否债权转让
+			rd.put("isFullAssign", false); //是否债权转让
+			rd.put("assignAmount", 0); //是否债权转让
 			rd.put("assignDate", ""); //债权转让时间
 			
 			investRecords.add(rd);
@@ -574,6 +459,132 @@ public class AutoregisterBase {
 			
 			obj.put("success", false);
 			obj.put("message", "获取投资记录失败");
+			return obj.toJSONString();
+		}
+	}
+	
+	/**
+	 * @param sign
+	 * @param timeStamp
+	 * @return 验证sign
+	 */
+	public Result validateSign(String sign, String timeStamp){
+		String timeStampDecrypt = this.cryption.decrypt(timeStamp);
+		String signStr = timeStampDecrypt + this.secretKey;
+		Result validationResult = new Result();
+		String mySign = MD5.GetMD5Code(signStr);
+		String signDecrypt = this.cryption.decrypt(sign);
+		if(StringUtils.equals(mySign, signDecrypt)){
+			validationResult.setSuccess(true);
+		}else{
+			validationResult.setSuccess(false);
+			validationResult.setStatus(this.cryption.encrypt(Constants.AutoRegisterStatus.NOT_PASS_VALIDATION));
+			validationResult.setMsg(this.cryption.encrypt("未通过安全校验"));
+		}
+		return validationResult;
+	}
+	
+	/**
+	 * @param sign
+	 * @param timeStamp
+	 * @return 验证投资记录sign
+	 */
+	public Result validateNotEncryptSign(String sign, String timeStamp){
+		String signStr = timeStamp + this.secretKey;
+		Result validationResult = new Result();
+		String mySign = MD5.GetMD5Code(signStr);
+		if(StringUtils.equals(mySign, sign)){
+			validationResult.setSuccess(true);
+		}else{
+			validationResult.setSuccess(false);
+			validationResult.setMsg("未通过安全校验");
+		}
+		return validationResult;
+	}
+	
+	
+	/**
+	 * @param pageCount
+	 * @param pageIndex
+	 * @param timeStamp
+	 * @param sign
+	 * @return
+	 */
+	public String getBidList(String pageCount, String pageIndex, String timeStamp, String sign){
+		JSONObject obj = new JSONObject();
+		Result signValidationResult = this.validateNotEncryptSign(sign, timeStamp);
+		if(!signValidationResult.isSuccess){
+			obj.put("success", false);
+			obj.put("message", signValidationResult.getMsg());
+			obj.put("totalCount", 0);  //总记录数
+			obj.put("bidList", new ArrayList());
+			return obj.toJSONString();
+		}
+		
+		
+		try {
+			List bidList = new ArrayList();
+			
+			HashMap rd1 = new HashMap();
+			rd1.put("bidId", "123");
+			rd1.put("status", 1);
+			rd1.put("name", "新手标");
+			rd1.put("minInvestAmount", 100);
+			rd1.put("introduction", "产品描述");
+			rd1.put("pcUrl", "https://www.xxdai.com/123.html");
+			rd1.put("mobileUrl", "https://m.xxdai.com/123.html");
+			rd1.put("totalAmount", 500000);
+			rd1.put("remainAmount", 10000);
+			rd1.put("duration", 3);
+			rd1.put("durationUnit", 30);
+			rd1.put("isNewUser", true);
+			rd1.put("repaymentType", 1);
+			rd1.put("isGroup", false);
+			rd1.put("interestRate", 10);
+			rd1.put("awardInterestRate", 1);
+			rd1.put("interestStartDate", "2016-10-10");
+			rd1.put("repaymentDate", "2017-01-10");
+			rd1.put("payInterestDay", "");
+			
+			bidList.add(rd1);
+			
+			HashMap rd2 = new HashMap();
+			rd2.put("bidId", "124");
+			rd2.put("status", 1);
+			rd2.put("name", "普通标");
+			rd2.put("minInvestAmount", 100);
+			rd2.put("introduction", "产品描述");
+			rd2.put("pcUrl", "https://www.xxdai.com/124.html");
+			rd2.put("mobileUrl", "https://m.xxdai.com/124.html");
+			rd2.put("totalAmount", 3000000);
+			rd2.put("remainAmount", 200000);
+			rd2.put("duration", 1);
+			rd2.put("durationUnit", 360);
+			rd2.put("isNewUser", false);
+			rd2.put("repaymentType", 1);
+			rd2.put("isGroup", false);
+			rd2.put("interestRate", 12);
+			rd2.put("awardInterestRate", 0);
+			rd2.put("interestStartDate", "2016-10-10");
+			rd2.put("repaymentDate", "2017-10-10");
+			rd2.put("payInterestDay", "");
+			
+			bidList.add(rd2);
+			
+			obj.put("success", true);
+			obj.put("message", "获取可投资标列表成功");
+			obj.put("totalCount", 10);  //总记录数
+			obj.put("bidList", bidList);
+			
+			return obj.toJSONString();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			
+			obj.put("success", false);
+			obj.put("message", "获取投资记录失败");
+			obj.put("totalCount", 0);  //总记录数
+			obj.put("bidList", new ArrayList());
 			return obj.toJSONString();
 		}
 	}

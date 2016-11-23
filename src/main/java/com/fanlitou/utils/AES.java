@@ -17,7 +17,7 @@ public class AES {
     public String encrypt(String value) {
         try {
         	int length = 16;
-        	int textLength = value.length();
+        	int textLength = value.getBytes("UTF-8").length;
         	for (int i = 0; i < length - (textLength % length); i++) {
 				value += "\0";
 			}
@@ -31,6 +31,7 @@ public class AES {
 
             return parseByte2HexStr(encrypted).trim();
         } catch (Exception ex) {
+        	ex.printStackTrace();
             return null;
         }
     }
@@ -47,6 +48,7 @@ public class AES {
 
             return new String(original).trim();
         } catch (Exception ex) {
+        	ex.printStackTrace();
             return null;
         }
     }

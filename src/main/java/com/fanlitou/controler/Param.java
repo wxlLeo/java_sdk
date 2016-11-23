@@ -4,7 +4,6 @@ public class Param {
 	public String fcode;
 	public String phone_num;
 	public String t;
-	public String serial_num;
 	public String uid;
 	public String register_token;
 	public String login_token;
@@ -16,7 +15,7 @@ public class Param {
 	
 	@Override
 	public String toString(){
-		return "fcode:" + fcode + " phone_num:" + phone_num + " t:" + t + " serial_num:" + serial_num + " uid:" + uid + " sign:" + sign 
+		return "fcode:" + fcode + " phone_num:" + phone_num + " t:" + t + " uid:" + uid + " sign:" + sign 
 				+ " register_token:" + register_token + " login_token:" + login_token + " bid_url:" + bid_url + " source:" + source
 				+ " start_time:" + start_time + " end_time:" + end_time;
 	}
@@ -38,12 +37,6 @@ public class Param {
 	}
 	public void setT(String t) {
 		this.t = t;
-	}
-	public String getSerial_num() {
-		return serial_num;
-	}
-	public void setSerial_num(String serial_num) {
-		this.serial_num = serial_num;
 	}
 	public String getUid() {
 		return uid;

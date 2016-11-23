@@ -4,12 +4,10 @@ public class Result {
 	
 	public boolean isSuccess = false;
 	public String status;
-	public String phoneNum;
-	public String userName = "";
-	public String serialNum;
-	public String registerToken = "";
-	public String errMsg = "";
-	public String loginToken = "";
+	public String user_name = "";
+	public String register_token = "";
+	public String msg = "";
+	public String login_token = "";
 	
 	
 	public boolean isSuccess() {
@@ -24,41 +22,29 @@ public class Result {
 	public void setStatus(String status) {
 		this.status = status;
 	}
-	public String getPhoneNum() {
-		return phoneNum;
+	public String getMsg() {
+		return msg;
 	}
-	public void setPhoneNum(String phoneNum) {
-		this.phoneNum = phoneNum;
+	public void setMsg(String msg) {
+		this.msg = msg;
 	}
-	public String getUserName() {
-		return userName;
+	public String getUser_name() {
+		return user_name;
 	}
-	public void setUserName(String userName) {
-		this.userName = userName;
+	public void setUser_name(String user_name) {
+		this.user_name = user_name;
 	}
-	public String getSerialNum() {
-		return serialNum;
+	public String getRegister_token() {
+		return register_token;
 	}
-	public void setSerialNum(String serialNum) {
-		this.serialNum = serialNum;
+	public void setRegister_token(String register_token) {
+		this.register_token = register_token;
 	}
-	public String getRegisterToken() {
-		return registerToken;
+	public String getLogin_token() {
+		return login_token;
 	}
-	public void setRegisterToken(String registerToken) {
-		this.registerToken = registerToken;
-	}
-	public String getErrMsg() {
-		return errMsg;
-	}
-	public void setErrMsg(String errMsg) {
-		this.errMsg = errMsg;
-	}
-	public String getLoginToken() {
-		return loginToken;
-	}
-	public void setLoginToken(String loginToken) {
-		this.loginToken = loginToken;
+	public void setLogin_token(String login_token) {
+		this.login_token = login_token;
 	}
 
 }

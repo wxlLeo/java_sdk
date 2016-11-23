@@ -24,7 +24,6 @@ public class FanlitouController {
 		String fcode = param.getFcode();
 		String phoneNum = param.getPhone_num();
 		String t = param.getT();
-		String serialNum = param.getSerial_num();
 		String uid = param.getUid();
 		String sign = param.getSign();
 		
@@ -32,7 +31,7 @@ public class FanlitouController {
 		
 		AutoregisterBase autoregister = new AutoregisterBase();
 		
-		Result result = autoregister.autoRegister(phoneNum, serialNum, fcode, t, uid, sign);
+		Result result = autoregister.autoRegister(phoneNum, fcode, t, uid, sign);
 		
 		return result;
 	}
@@ -45,9 +44,7 @@ public class FanlitouController {
     @ResponseBody
     public Result registerQuery(@RequestBody Param param){
 		String fcode = param.getFcode();
-		String phoneNum = param.getPhone_num();
 		String t = param.getT();
-		String serialNum = param.getSerial_num();
 		String uid = param.getUid();
 		String sign = param.getSign();
 		
@@ -55,7 +52,7 @@ public class FanlitouController {
 		
 		AutoregisterBase autoregister = new AutoregisterBase();
 		
-		Result result = autoregister.registerQuery(phoneNum, serialNum, fcode, t, uid, sign);
+		Result result = autoregister.registerQuery(uid, fcode, t, sign);
 		
 		return result;
 	}
@@ -68,9 +65,7 @@ public class FanlitouController {
     @ResponseBody
     public Result loginToken(@RequestBody Param param){
 		String fcode = param.getFcode();
-		String phoneNum = param.getPhone_num();
 		String t = param.getT();
-		String serialNum = param.getSerial_num();
 		String uid = param.getUid();
 		String registertoken = param.getRegistertoken();
 		String sign = param.getSign();
@@ -79,7 +74,7 @@ public class FanlitouController {
 		
 		AutoregisterBase autoregister = new AutoregisterBase();
 		
-		Result result = autoregister.getUserLoginToken(phoneNum, fcode, registertoken, uid, t, serialNum, sign);
+		Result result = autoregister.getUserLoginToken(fcode, registertoken, uid, t, sign);
 		
 		return result;
 	}
@@ -91,7 +86,7 @@ public class FanlitouController {
 	@RequestMapping(value="/flt/autoLogin",method=RequestMethod.GET)
     @ResponseBody
     public void autoLogin(@RequestParam("fcode") String fcode, 
-    		@RequestParam("phone_num") String phoneNum, 
+    		@RequestParam("uid") String uid, 
     		@RequestParam("t") String t, 
     		@RequestParam("register_token") String registerToken, 
     		@RequestParam("login_token") String loginToken, 
@@ -101,7 +96,7 @@ public class FanlitouController {
 		
 		AutoregisterBase autoregister = new AutoregisterBase();
 		
-		autoregister.doAutoLogin(phoneNum, fcode, registerToken, loginToken, t, bidUrl, source, sign);
+		autoregister.doAutoLogin(uid, fcode, registerToken, loginToken, t, bidUrl, source, sign);
 		
 	}
 	
@@ -112,7 +107,7 @@ public class FanlitouController {
 	@RequestMapping(value="/flt/userBind",method=RequestMethod.GET)
     @ResponseBody
     public void userBind(@RequestParam("fcode") String fcode, 
-    		@RequestParam("phone_num") String phoneNum, 
+    		@RequestParam("uid") String uid, 
     		@RequestParam("t") String t, 
     		@RequestParam("bid_url") String bidUrl, 
     		@RequestParam("source") String source, 
@@ -120,7 +115,7 @@ public class FanlitouController {
 		
 		AutoregisterBase autoregister = new AutoregisterBase();
 		
-		autoregister.doUserBind(phoneNum, fcode, t, bidUrl, source, sign);
+		autoregister.doUserBind(uid, fcode, t, bidUrl, source, sign);
 		
 	}
 	
@@ -130,7 +125,7 @@ public class FanlitouController {
 	 */
 	@RequestMapping(value="/flt/investRecord",method=RequestMethod.GET)
     @ResponseBody
-    public String investRecord(@RequestParam("fcode") String fcode, 
+    public String investRecord( 
     		@RequestParam("t") String t, 
     		@RequestParam("start_time") String startTime, 
     		@RequestParam("end_time") String endTime, 
@@ -138,7 +133,24 @@ public class FanlitouController {
 		
 		AutoregisterBase autoregister = new AutoregisterBase();
 		
-		return autoregister.getInvestRecord(sign, fcode, t, startTime, endTime);
+		return autoregister.getInvestRecord(sign, t, startTime, endTime);
+		
+	}
+	
+	/**
+	 * @param param
+	 * @return 获取和投资标列表
+	 */
+	@RequestMapping(value="/flt/bidList",method=RequestMethod.GET)
+    @ResponseBody
+    public String bidList(@RequestParam("pageCount") String pageCount, 
+    		@RequestParam("pageIndex") String pageIndex,
+    		@RequestParam("t") String t, 
+    		@RequestParam("sign") String sign){
+		
+		AutoregisterBase autoregister = new AutoregisterBase();
+		
+		return autoregister.getBidList(pageCount, pageIndex, t, sign);
 		
 	}
     
